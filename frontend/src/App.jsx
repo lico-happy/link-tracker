@@ -79,11 +79,11 @@ export default function App() {
       <div className="hero">
         <div className="hero-icon">🔗</div>
         <h1>Link Tracker</h1>
-        <p>Shorten links and track every click</p>
+        <p>Share links. Track every click.</p>
       </div>
 
       {/* Create */}
-      <div className="section-label">Shorten a URL</div>
+      <div className="section-label">Create a tracked link</div>
       <div className="create-card">
         <form onSubmit={handleCreate}>
           <div className="input-row">
@@ -92,11 +92,11 @@ export default function App() {
               type="url"
               value={url}
               onChange={e => setUrl(e.target.value)}
-              placeholder="Paste your long URL here..."
+              placeholder="Paste any URL..."
               required
             />
             <button className="shorten-btn" type="submit" disabled={loading}>
-              {loading ? <><span className="spinner" /> Shortening</> : 'Shorten →'}
+              {loading ? <><span className="spinner" /> Creating...</> : 'Track →'}
             </button>
           </div>
           {error && <div className="error-alert"><span>⚠</span> {error}</div>}
