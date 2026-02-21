@@ -1,16 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 const API = import.meta.env.VITE_API_URL || '/api'
-
-function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / 86400000)
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 30) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString()
-}
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
@@ -28,18 +19,9 @@ function CopyButton({ text }) {
 
 export default function App() {
   const [url, setUrl] = useState('')
-  const [links, setLinks] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
-
-  const fetchLinks = async () => {
-    const res = await fetch(`${API}/links`)
-    const data = await res.json()
-    setLinks(data)
-  }
-
-  useEffect(() => { fetchLinks() }, [])
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -56,7 +38,6 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || 'Something went wrong')
       setCreated(data)
       setUrl('')
-      fetchLinks()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -97,44 +78,20 @@ export default function App() {
 
       {created && (
         <div className="result-card">
-          <div>
+          <div className="result-info">
             <div className="result-label">Your short link is ready</div>
             <div className="result-url">{created.short_url}</div>
+            <div className="result-warning">⚠ Save this — you won't see it again</div>
           </div>
           <CopyButton text={created.short_url} />
         </div>
       )}
 
-      <div className="links-header">
-        <span className="links-title">Your links</span>
-        {links.length > 0 && <span className="links-count">{links.length} link{links.length !== 1 ? 's' : ''}</span>}
-      </div>
-
-      {links.length === 0 ? (
+      {!created && (
         <div className="empty-state">
-          <div className="empty-icon">📭</div>
-          <p>No links yet — paste a URL above to get started</p>
+          <div className="empty-icon">🔒</div>
+          <p>Your link is shown once after creation.<br />Copy it — it won't be listed here.</p>
         </div>
-      ) : (
-        links.map(link => (
-          <div className="link-card" key={link.id}>
-            <div className="link-main">
-              <div className="link-short">
-                <a href={link.short_url} target="_blank" rel="noopener noreferrer">
-                  {link.short_url?.replace(/^https?:\/\//, '')}
-                </a>
-                <span className="click-badge">↗ {link.click_count || 0} clicks</span>
-              </div>
-              <div className="link-original" title={link.original_url}>
-                {link.original_url}
-              </div>
-              <div className="link-meta">{timeAgo(link.created_at)}</div>
-            </div>
-            <div className="link-actions">
-              <CopyButton text={link.short_url} />
-            </div>
-          </div>
-        ))
       )}
     </div>
   )
