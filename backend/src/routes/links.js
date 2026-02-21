@@ -48,3 +48,20 @@ linksRouter.get('/', async (req, res) => {
   `)
   res.json(result.rows)
 })
+
+// GET /api/links/:code/stats — click count for a short code
+linksRouter.get('/:code/stats', async (req, res) => {
+  const { code } = req.params
+  const result = await pool.query(
+    `SELECT l.short_code, l.original_url, l.created_at,
+            COUNT(c.id) AS click_count
+     FROM links l
+     LEFT JOIN clicks c ON c.link_id = l.id
+     WHERE l.short_code = $1
+     GROUP BY l.id`,
+    [code]
+  )
+  if (result.rows.length === 0) return res.status(404).json({ error: 'Link not found' })
+  const row = result.rows[0]
+  res.json({ short_code: row.short_code, original_url: row.original_url, click_count: Number(row.click_count), created_at: row.created_at })
+})

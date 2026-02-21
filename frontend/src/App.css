@@ -311,3 +311,85 @@ body {
 
 .result-warning { color: #888; font-size: 0.78rem; margin-top: 6px; }
 .result-info { flex: 1; min-width: 0; }
+
+/* ── Section label ─────────────────────────── */
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #C9A84C;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* ── Divider ───────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid #1e1e1e;
+  margin: 32px 0 28px;
+}
+
+/* ── Stats button ──────────────────────────── */
+.stats-btn {
+  background: transparent !important;
+  border: 1px solid #C9A84C !important;
+  color: #C9A84C !important;
+}
+.stats-btn:hover:not(:disabled) {
+  background: #C9A84C !important;
+  color: #0D0D0D !important;
+}
+
+/* ── Stats card ────────────────────────────── */
+.stats-card {
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.stats-clicks {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 72px;
+  padding-right: 24px;
+  border-right: 1px solid #2a2a2a;
+}
+
+.stats-number {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #C9A84C;
+  line-height: 1;
+}
+
+.stats-unit {
+  font-size: 0.72rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.stats-detail { flex: 1; min-width: 0; }
+
+.stats-url {
+  color: #F0EAD6;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.stats-meta {
+  color: #C9A84C;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}

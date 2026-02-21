@@ -23,6 +23,11 @@ export default function App() {
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
 
+  const [statsQuery, setStatsQuery] = useState('')
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState('')
+  const [stats, setStats] = useState(null)
+
   const handleCreate = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -45,6 +50,30 @@ export default function App() {
     }
   }
 
+  const handleStats = async (e) => {
+    e.preventDefault()
+    setStatsLoading(true)
+    setStatsError('')
+    setStats(null)
+    try {
+      // Accept full URL or just the code
+      let code = statsQuery.trim()
+      try {
+        const parsed = new URL(code)
+        code = parsed.pathname.replace(/^\//, '')
+      } catch {}
+
+      const res = await fetch(`${API}/links/${code}/stats`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Link not found')
+      setStats(data)
+    } catch (err) {
+      setStatsError(err.message)
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
   return (
     <div className="app">
       <div className="hero">
@@ -53,6 +82,8 @@ export default function App() {
         <p>Shorten links and track every click</p>
       </div>
 
+      {/* Create */}
+      <div className="section-label">Shorten a URL</div>
       <div className="create-card">
         <form onSubmit={handleCreate}>
           <div className="input-row">
@@ -68,11 +99,7 @@ export default function App() {
               {loading ? <><span className="spinner" /> Shortening</> : 'Shorten →'}
             </button>
           </div>
-          {error && (
-            <div className="error-alert">
-              <span>⚠</span> {error}
-            </div>
-          )}
+          {error && <div className="error-alert"><span>⚠</span> {error}</div>}
         </form>
       </div>
 
@@ -87,10 +114,39 @@ export default function App() {
         </div>
       )}
 
-      {!created && (
-        <div className="empty-state">
-          <div className="empty-icon">🔒</div>
-          <p>Your link is shown once after creation.<br />Copy it — it won't be listed here.</p>
+      <div className="divider" />
+
+      {/* Stats lookup */}
+      <div className="section-label">Check click stats</div>
+      <div className="create-card">
+        <form onSubmit={handleStats}>
+          <div className="input-row">
+            <input
+              className="url-input"
+              type="text"
+              value={statsQuery}
+              onChange={e => setStatsQuery(e.target.value)}
+              placeholder="Paste your short link or code..."
+              required
+            />
+            <button className="shorten-btn stats-btn" type="submit" disabled={statsLoading}>
+              {statsLoading ? <><span className="spinner" /> Checking</> : 'Check →'}
+            </button>
+          </div>
+          {statsError && <div className="error-alert"><span>⚠</span> {statsError}</div>}
+        </form>
+      </div>
+
+      {stats && (
+        <div className="stats-card">
+          <div className="stats-clicks">
+            <span className="stats-number">{stats.click_count}</span>
+            <span className="stats-unit">click{stats.click_count !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="stats-detail">
+            <div className="stats-url">{stats.original_url}</div>
+            <div className="stats-meta">/{stats.short_code}</div>
+          </div>
         </div>
       )}
     </div>
