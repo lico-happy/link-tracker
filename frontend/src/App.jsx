@@ -1,16 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 
 const API = import.meta.env.VITE_API_URL || '/api'
-
-function timeAgo(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / 86400000)
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  if (days < 30) return `${days}d ago`
-  return new Date(dateStr).toLocaleDateString()
-}
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
@@ -28,18 +19,14 @@ function CopyButton({ text }) {
 
 export default function App() {
   const [url, setUrl] = useState('')
-  const [links, setLinks] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState(null)
 
-  const fetchLinks = async () => {
-    const res = await fetch(`${API}/links`)
-    const data = await res.json()
-    setLinks(data)
-  }
-
-  useEffect(() => { fetchLinks() }, [])
+  const [statsQuery, setStatsQuery] = useState('')
+  const [statsLoading, setStatsLoading] = useState(false)
+  const [statsError, setStatsError] = useState('')
+  const [stats, setStats] = useState(null)
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -56,11 +43,34 @@ export default function App() {
       if (!res.ok) throw new Error(data.error || 'Something went wrong')
       setCreated(data)
       setUrl('')
-      fetchLinks()
     } catch (err) {
       setError(err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleStats = async (e) => {
+    e.preventDefault()
+    setStatsLoading(true)
+    setStatsError('')
+    setStats(null)
+    try {
+      // Accept full URL or just the code
+      let code = statsQuery.trim()
+      try {
+        const parsed = new URL(code)
+        code = parsed.pathname.replace(/^\//, '')
+      } catch {}
+
+      const res = await fetch(`${API}/links/${code}/stats`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Link not found')
+      setStats(data)
+    } catch (err) {
+      setStatsError(err.message)
+    } finally {
+      setStatsLoading(false)
     }
   }
 
@@ -69,9 +79,11 @@ export default function App() {
       <div className="hero">
         <div className="hero-icon">🔗</div>
         <h1>Link Tracker</h1>
-        <p>Shorten links and track every click</p>
+        <p>Share links. Track every click.</p>
       </div>
 
+      {/* Create */}
+      <div className="section-label">Create a tracked link</div>
       <div className="create-card">
         <form onSubmit={handleCreate}>
           <div className="input-row">
@@ -80,61 +92,62 @@ export default function App() {
               type="url"
               value={url}
               onChange={e => setUrl(e.target.value)}
-              placeholder="Paste your long URL here..."
+              placeholder="Paste any URL..."
               required
             />
             <button className="shorten-btn" type="submit" disabled={loading}>
-              {loading ? <><span className="spinner" /> Shortening</> : 'Shorten →'}
+              {loading ? <><span className="spinner" /> Creating...</> : 'Track →'}
             </button>
           </div>
-          {error && (
-            <div className="error-alert">
-              <span>⚠</span> {error}
-            </div>
-          )}
+          {error && <div className="error-alert"><span>⚠</span> {error}</div>}
         </form>
       </div>
 
       {created && (
         <div className="result-card">
-          <div>
+          <div className="result-info">
             <div className="result-label">Your short link is ready</div>
             <div className="result-url">{created.short_url}</div>
+            <div className="result-warning">⚠ Save this — you won't see it again</div>
           </div>
           <CopyButton text={created.short_url} />
         </div>
       )}
 
-      <div className="links-header">
-        <span className="links-title">Your links</span>
-        {links.length > 0 && <span className="links-count">{links.length} link{links.length !== 1 ? 's' : ''}</span>}
+      <div className="divider" />
+
+      {/* Stats lookup */}
+      <div className="section-label">Check click stats</div>
+      <div className="create-card">
+        <form onSubmit={handleStats}>
+          <div className="input-row">
+            <input
+              className="url-input"
+              type="text"
+              value={statsQuery}
+              onChange={e => setStatsQuery(e.target.value)}
+              placeholder="Paste your short link or code..."
+              required
+            />
+            <button className="shorten-btn stats-btn" type="submit" disabled={statsLoading}>
+              {statsLoading ? <><span className="spinner" /> Checking</> : 'Check →'}
+            </button>
+          </div>
+          {statsError && <div className="error-alert"><span>⚠</span> {statsError}</div>}
+        </form>
       </div>
 
-      {links.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📭</div>
-          <p>No links yet — paste a URL above to get started</p>
-        </div>
-      ) : (
-        links.map(link => (
-          <div className="link-card" key={link.id}>
-            <div className="link-main">
-              <div className="link-short">
-                <a href={link.short_url} target="_blank" rel="noopener noreferrer">
-                  {link.short_url?.replace(/^https?:\/\//, '')}
-                </a>
-                <span className="click-badge">↗ {link.click_count || 0} clicks</span>
-              </div>
-              <div className="link-original" title={link.original_url}>
-                {link.original_url}
-              </div>
-              <div className="link-meta">{timeAgo(link.created_at)}</div>
-            </div>
-            <div className="link-actions">
-              <CopyButton text={link.short_url} />
-            </div>
+      {stats && (
+        <div className="stats-card">
+          <div className="stats-clicks">
+            <span className="stats-number">{stats.click_count}</span>
+            <span className="stats-unit">click{stats.click_count !== 1 ? 's' : ''}</span>
           </div>
-        ))
+          <div className="stats-detail">
+            <div className="stats-url">{stats.original_url}</div>
+            <div className="stats-meta">/{stats.short_code}</div>
+          </div>
+        </div>
       )}
     </div>
   )
