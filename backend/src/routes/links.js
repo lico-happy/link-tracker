@@ -5,12 +5,14 @@ import { rateLimit } from 'express-rate-limit'
 import { RedisStore } from 'rate-limit-redis'
 import { redis } from '../db/redis.js'
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  store: new RedisStore({ sendCommand: (...args) => redis.sendCommand(args) }),
-})
+const limiter = process.env.NODE_ENV === 'test'
+  ? (req, res, next) => next()
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      store: new RedisStore({ sendCommand: (...args) => redis.sendCommand(args) }),
+    })
 
 export const linksRouter = Router()
 
@@ -37,16 +39,40 @@ linksRouter.post('/', limiter, async (req, res) => {
   res.json({ ...result.rows[0], short_url: `${base}/${short_code}` })
 })
 
-// GET /api/links — list all links with click counts
+// GET /api/links — paginated links with click counts
 linksRouter.get('/', async (req, res) => {
-  const result = await pool.query(`
-    SELECT l.*, COUNT(c.id) AS click_count, MAX(c.clicked_at) AS last_clicked
-    FROM links l
-    LEFT JOIN clicks c ON c.link_id = l.id
-    GROUP BY l.id
-    ORDER BY l.created_at DESC
-  `)
-  res.json(result.rows)
+  const pageRaw = Number(req.query.page ?? 1)
+  const limitRaw = Number(req.query.limit ?? 20)
+
+  const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(Math.floor(limitRaw), 100) : 20
+  const offset = (page - 1) * limit
+
+  const countResult = await pool.query('SELECT COUNT(*)::int AS total FROM links')
+  const total = countResult.rows[0]?.total ?? 0
+
+  const result = await pool.query(
+    `SELECT l.*, COUNT(c.id) AS click_count, MAX(c.clicked_at) AS last_clicked
+     FROM links l
+     LEFT JOIN clicks c ON c.link_id = l.id
+     GROUP BY l.id
+     ORDER BY l.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  )
+
+  const totalPages = Math.max(Math.ceil(total / limit), 1)
+  res.json({
+    items: result.rows,
+    pagination: {
+      total,
+      page,
+      limit,
+      total_pages: totalPages,
+      has_next: page < totalPages,
+      has_prev: page > 1,
+    },
+  })
 })
 
 // GET /api/links/:code/stats — click count for a short code
