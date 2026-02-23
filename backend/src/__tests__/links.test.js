@@ -5,7 +5,7 @@ vi.mock('../db/index.js', () => ({
   pool: {
     query: vi.fn(),
   },
-  migrate: vi.fn(),
+  migrate: vi.fn().mockResolvedValue(undefined),
 }))
 
 // Mock redis
@@ -54,14 +54,20 @@ describe('POST /api/links', () => {
 })
 
 describe('GET /api/links', () => {
-  it('returns list of links', async () => {
-    pool.query.mockResolvedValueOnce({
-      rows: [{ id: 1, short_code: 'abc123', original_url: 'https://example.com', click_count: '5' }]
-    })
-    const res = await request.get('/api/links')
+  it('returns paginated list of links', async () => {
+    pool.query
+      .mockResolvedValueOnce({ rows: [{ total: 1 }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: 1, short_code: 'abc123', original_url: 'https://example.com', click_count: '5' }],
+      })
+
+    const res = await request.get('/api/links?page=1&limit=20')
     expect(res.status).toBe(200)
-    expect(Array.isArray(res.body)).toBe(true)
-    expect(res.body[0].short_code).toBe('abc123')
+    expect(Array.isArray(res.body.items)).toBe(true)
+    expect(res.body.items[0].short_code).toBe('abc123')
+    expect(res.body.pagination.total).toBe(1)
+    expect(res.body.pagination.page).toBe(1)
+    expect(res.body.pagination.limit).toBe(20)
   })
 })
 
